@@ -7,7 +7,7 @@ services:
       dockerfile: Thalamo.Gsp.Emoc.Services/Dockerfile
     restart: always
     ports:
-      - "8080:8080"
+      - "8090:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:8080
@@ -24,11 +24,11 @@ services:
       context: ./Frontend
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+        - NEXT_PUBLIC_API_URL=http://72.61.117.172:8090
     restart: always
     ports:
       - "80:3000" # Expose on port 80 (HTTP)
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - NEXT_PUBLIC_API_URL=http://72.61.117.172:8090
     depends_on:
       - backend
