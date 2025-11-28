@@ -1,48 +1,87 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function NewMocPage() {
-    const [step, setStep] = useState(1);
+    const router = useRouter();
+    const [currentDate, setCurrentDate] = useState("");
+
+    // Initialize date on client side to avoid hydration mismatch
+    useEffect(() => {
+        const now = new Date();
+        const formattedDate = now.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        setCurrentDate(formattedDate);
+    }, []);
+
     const [formData, setFormData] = useState({
+        requester: "John Smith",
         title: "",
-        category: "Plant Change",
-        plantChangeType: "Standard change - affects multiple areas/systems",
-        type: "Permanent",
-        urgency: "Normal",
-        initiatorDepartment: "Emergency Dept.",
-        initiatorDivision: "Medical Services",
-        location: "",
-        scope: {
-            mechanical: false,
-            electrical: false,
-            civil: false,
-            process: false,
-            procedure: false,
-            control: false,
-            sis: false,
-        },
-        detail: "",
+        type: "",
         reasonForChange: "",
-        benefits: "",
-        assetsAffected: "",
-        notificationNumber: "",
-        riskLevel: "Low",
+        estimatedBenefit: "",
+        estimatedCost: "",
+        estimatedStartDate: "",
+        estimatedEndDate: "",
+        background: "",
+        objective: "",
+        target: "",
+        attachments: [] as File[],
     });
 
-    const handleNext = () => setStep(step + 1);
-    const handleBack = () => setStep(step - 1);
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
 
-    const handleSubmit = async () => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            const newFiles = Array.from(e.target.files);
+            setFormData(prev => ({ ...prev, attachments: [...prev.attachments, ...newFiles] }));
+        }
+    };
+
+    const removeFile = (index: number) => {
+        setFormData(prev => ({
+            ...prev,
+            attachments: prev.attachments.filter((_, i) => i !== index)
+        }));
+    };
+
+    const handleSubmit = async (status: string) => {
+        // Basic Validation
+        if (!formData.title || !formData.type || !formData.reasonForChange || !formData.estimatedBenefit ||
+            !formData.estimatedCost || !formData.estimatedStartDate || !formData.estimatedEndDate ||
+            !formData.background || !formData.objective || formData.attachments.length === 0) {
+            alert("Please fill in all required fields and upload at least one attachment.");
+            return;
+        }
+
         try {
-            // Transform scope object to string as required by API
+            // Prepare payload for API
             const payload = {
-                ...formData,
-                scope: JSON.stringify(formData.scope)
+                title: formData.title,
+                type: formData.type,
+                reasonForChange: formData.reasonForChange,
+                estimatedBenefit: parseFloat(formData.estimatedBenefit),
+                estimatedCost: parseFloat(formData.estimatedCost),
+                estimatedStartDate: formData.estimatedStartDate,
+                estimatedEndDate: formData.estimatedEndDate,
+                background: formData.background,
+                objective: formData.objective,
+                target: formData.target,
+                // Attachments would typically be uploaded to a separate endpoint or as FormData
+                // For this stub, we just send the metadata
             };
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/MocRequests`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'}/api/MocRequests`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -52,8 +91,8 @@ export default function NewMocPage() {
 
             if (response.ok) {
                 const data = await response.json();
-                alert(`MoC Request Created Successfully! ID: ${data.id}`);
-                // Redirect or reset form here
+                alert(`MoC Request ${status === 'Draft' ? 'Saved as Draft' : 'Submitted'} Successfully! ID: ${data.id}`);
+                router.push("/"); // Redirect to home
             } else {
                 alert('Failed to create MoC Request');
                 console.error('Error:', await response.text());
@@ -65,232 +104,219 @@ export default function NewMocPage() {
     };
 
     return (
-        <div className="space-y-8">
-            <h1 className="text-3xl font-bold text-gray-900">New EMOC Request</h1>
+        <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-8 border-b pb-4">New MoC Request</h1>
 
-            {/* Stepper */}
-            <div className="flex items-center space-x-4">
-                <div className={`flex items-center px-4 py-2 rounded-md ${step === 1 ? "bg-red-100 text-red-600 font-bold" : "bg-gray-100 text-gray-500"}`}>
-                    <span className="mr-2">1.</span> Identify Change
-                </div>
-                <span className="text-gray-400">&gt;</span>
-                <div className={`flex items-center px-4 py-2 rounded-md ${step === 2 ? "bg-green-100 text-green-600 font-bold" : "bg-gray-100 text-gray-500"}`}>
-                    <span className="mr-2">2.</span> Detail Case for Change
-                </div>
-            </div>
-
-            <div className="bg-white shadow rounded-lg p-8">
-                {step === 1 && (
-                    <div className="space-y-8">
-                        {/* Category */}
-                        <div>
-                            <h3 className="text-lg font-bold text-gray-900 mb-4">Category</h3>
-                            <div className="space-y-4">
-                                <div className="flex items-center space-x-6">
-                                    <label className="flex items-center space-x-2 cursor-pointer">
-                                        <input type="radio" name="category" className="form-radio text-blue-600" checked={formData.category === "Plant Change"} onChange={() => setFormData({ ...formData, category: "Plant Change" })} />
-                                        <span>Plant Change</span>
-                                    </label>
-                                    <label className="flex items-center space-x-2 cursor-pointer">
-                                        <input type="radio" name="category" className="form-radio text-blue-600" checked={formData.category === "Maintenance Change"} onChange={() => setFormData({ ...formData, category: "Maintenance Change" })} />
-                                        <span>Maintenance Change</span>
-                                    </label>
-                                    <label className="flex items-center space-x-2 cursor-pointer">
-                                        <input type="radio" name="category" className="form-radio text-blue-600" checked={formData.category === "Operation Override"} onChange={() => setFormData({ ...formData, category: "Operation Override" })} />
-                                        <span>Operation Override</span>
-                                    </label>
-                                </div>
-
-                                {formData.category === "Plant Change" && (
-                                    <div className="ml-6 space-y-2 border-l-2 border-gray-200 pl-4">
-                                        <label className="flex items-center space-x-2 cursor-pointer">
-                                            <input type="radio" name="plantChangeType" className="form-radio text-gray-600" checked={formData.plantChangeType.includes("multiple areas")} onChange={() => setFormData({ ...formData, plantChangeType: "Standard change - affects multiple areas/systems" })} />
-                                            <span className="text-gray-600">Standard change - affects multiple areas/systems with proper documentation</span>
-                                        </label>
-                                        <label className="flex items-center space-x-2 cursor-pointer">
-                                            <input type="radio" name="plantChangeType" className="form-radio text-gray-600" checked={formData.plantChangeType.includes("area/system")} onChange={() => setFormData({ ...formData, plantChangeType: "Standard change - affects area/system" })} />
-                                            <span className="text-gray-600">Standard change - affects area/system with proper documentation</span>
-                                        </label>
-                                        <label className="flex items-center space-x-2 cursor-pointer">
-                                            <input type="radio" name="plantChangeType" className="form-radio text-gray-600" checked={formData.plantChangeType.includes("Non-standard")} onChange={() => setFormData({ ...formData, plantChangeType: "Non-standard change" })} />
-                                            <span className="text-gray-600">Non-standard change - affects equipment/process without proper approval procedure</span>
-                                        </label>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Type */}
-                        <div>
-                            <h3 className="text-lg font-bold text-gray-900 mb-4">Type</h3>
-                            <div className="flex items-center space-x-8">
-                                <label className="flex items-center space-x-2 cursor-pointer">
-                                    <input type="radio" name="type" className="form-radio text-blue-600" checked={formData.type === "Permanent"} onChange={() => setFormData({ ...formData, type: "Permanent" })} />
-                                    <div>
-                                        <span className="block font-medium">Permanent</span>
-                                        <span className="text-xs text-gray-500">More than 365 days</span>
-                                    </div>
-                                </label>
-                                <label className="flex items-center space-x-2 cursor-pointer">
-                                    <input type="radio" name="type" className="form-radio text-blue-600" checked={formData.type === "Temporary"} onChange={() => setFormData({ ...formData, type: "Temporary" })} />
-                                    <div>
-                                        <span className="block font-medium">Temporary</span>
-                                        <span className="text-xs text-gray-500">Less than 365 days from start date</span>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-
-                        {/* Urgency */}
-                        <div>
-                            <h3 className="text-lg font-bold text-gray-900 mb-4">Urgency</h3>
-                            <div className="flex items-center space-x-8">
-                                <label className="flex items-center space-x-2 cursor-pointer">
-                                    <input type="radio" name="urgency" className="form-radio text-blue-600" checked={formData.urgency === "Normal"} onChange={() => setFormData({ ...formData, urgency: "Normal" })} />
-                                    <span>Normal</span>
-                                </label>
-                                <label className="flex items-center space-x-2 cursor-pointer">
-                                    <input type="radio" name="urgency" className="form-radio text-red-600" checked={formData.urgency === "Emergency"} onChange={() => setFormData({ ...formData, urgency: "Emergency" })} />
-                                    <span className="text-red-600 font-medium">Emergency</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center space-x-4 pt-4 border-t border-gray-200">
-                            <Link href="/" className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium">
-                                Cancel
-                            </Link>
-                            <button onClick={handleNext} className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 font-medium">
-                                Next
-                            </button>
-                        </div>
+            <div className="bg-white shadow-lg rounded-lg overflow-hidden border border-gray-200">
+                {/* Header Section */}
+                <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Requester</label>
+                        <input
+                            type="text"
+                            value={formData.requester}
+                            readOnly
+                            className="w-full bg-gray-100 border border-gray-300 rounded-md px-3 py-2 text-gray-600 focus:outline-none cursor-not-allowed"
+                        />
                     </div>
-                )}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Issue Date</label>
+                        <input
+                            type="text"
+                            value={currentDate}
+                            readOnly
+                            className="w-full bg-gray-100 border border-gray-300 rounded-md px-3 py-2 text-gray-600 focus:outline-none cursor-not-allowed"
+                        />
+                    </div>
+                </div>
 
-                {step === 2 && (
-                    <div className="space-y-6">
-                        <div className="bg-gray-50 p-4 rounded-md flex space-x-8 text-sm">
-                            <div><span className="font-bold">Category:</span> {formData.category}</div>
-                            <div><span className="font-bold">Type:</span> {formData.type}</div>
-                            <div><span className="font-bold">Urgency:</span> <span className={formData.urgency === 'Emergency' ? 'text-red-600' : ''}>{formData.urgency}</span></div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="md:col-span-2">
-                                <label className="block text-sm font-bold text-gray-700 mb-1">MoC Title <span className="text-red-500">*</span></label>
-                                <input type="text" className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Enter MoC title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} />
-                            </div>
-
+                <div className="p-6 space-y-8">
+                    {/* MoC Info Section */}
+                    <section>
+                        <h2 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">MOC Info</h2>
+                        <div className="space-y-6">
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Initiator Department</label>
-                                <input type="text" className="w-full border-gray-300 rounded-md shadow-sm bg-gray-50" value={formData.initiatorDepartment} readOnly />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Initiator Division</label>
-                                <input type="text" className="w-full border-gray-300 rounded-md shadow-sm bg-gray-50" value={formData.initiatorDivision} readOnly />
+                                <label className="block text-sm font-bold text-gray-700 mb-1">MOC Title <span className="text-red-500">*</span></label>
+                                <input
+                                    type="text"
+                                    name="title"
+                                    value={formData.title}
+                                    onChange={handleChange}
+                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                                    placeholder="Enter MOC Title"
+                                />
                             </div>
 
-                            <div className="md:col-span-2">
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Location/Area/Terminal <span className="text-red-500">*</span></label>
-                                <select className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })}>
-                                    <option value="">Select location...</option>
-                                    <option value="Unit 1">Unit 1</option>
-                                    <option value="Unit 2">Unit 2</option>
-                                    <option value="Terminal A">Terminal A</option>
+                            <div className="w-full md:w-1/3">
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Type <span className="text-red-500">*</span></label>
+                                <select
+                                    name="type"
+                                    value={formData.type}
+                                    onChange={handleChange}
+                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                                >
+                                    <option value="">Please select</option>
+                                    <option value="Permanent">Permanent</option>
+                                    <option value="Temporary">Temporary</option>
+                                    <option value="Overriding">Overriding</option>
                                 </select>
                             </div>
-                        </div>
 
-                        {/* Scope */}
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Scope</label>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <h4 className="text-sm font-semibold mb-2">Physical</h4>
-                                    <div className="space-y-2">
-                                        <label className="flex items-center space-x-2"><input type="checkbox" className="rounded text-blue-600" checked={formData.scope.mechanical} onChange={(e) => setFormData({ ...formData, scope: { ...formData.scope, mechanical: e.target.checked } })} /> <span>Mechanical</span></label>
-                                        <label className="flex items-center space-x-2"><input type="checkbox" className="rounded text-blue-600" checked={formData.scope.electrical} onChange={(e) => setFormData({ ...formData, scope: { ...formData.scope, electrical: e.target.checked } })} /> <span>Electrical</span></label>
-                                        <label className="flex items-center space-x-2"><input type="checkbox" className="rounded text-blue-600" checked={formData.scope.civil} onChange={(e) => setFormData({ ...formData, scope: { ...formData.scope, civil: e.target.checked } })} /> <span>Civil</span></label>
-                                    </div>
-                                </div>
-                                <div>
-                                    <h4 className="text-sm font-semibold mb-2">Process</h4>
-                                    <div className="space-y-2">
-                                        <label className="flex items-center space-x-2"><input type="checkbox" className="rounded text-blue-600" checked={formData.scope.process} onChange={(e) => setFormData({ ...formData, scope: { ...formData.scope, process: e.target.checked } })} /> <span>Process</span></label>
-                                        <label className="flex items-center space-x-2"><input type="checkbox" className="rounded text-blue-600" checked={formData.scope.procedure} onChange={(e) => setFormData({ ...formData, scope: { ...formData.scope, procedure: e.target.checked } })} /> <span>Procedure</span></label>
-                                    </div>
-                                </div>
-                                <div>
-                                    <h4 className="text-sm font-semibold mb-2">Control</h4>
-                                    <div className="space-y-2">
-                                        <label className="flex items-center space-x-2"><input type="checkbox" className="rounded text-blue-600" checked={formData.scope.control} onChange={(e) => setFormData({ ...formData, scope: { ...formData.scope, control: e.target.checked } })} /> <span>Control & Instrument (C&I)</span></label>
-                                        <label className="flex items-center space-x-2"><input type="checkbox" className="rounded text-blue-600" checked={formData.scope.sis} onChange={(e) => setFormData({ ...formData, scope: { ...formData.scope, sis: e.target.checked } })} /> <span>Safety Instrument System (SIS)</span></label>
-                                    </div>
-                                </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Reason for changes <span className="text-red-500">*</span></label>
+                                <textarea
+                                    name="reasonForChange"
+                                    value={formData.reasonForChange}
+                                    onChange={handleChange}
+                                    rows={4}
+                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                                    placeholder="Describe the reason for changes..."
+                                ></textarea>
                             </div>
                         </div>
+                    </section>
 
-                        {/* Text Areas */}
+                    {/* Estimated Benefit / Cost / Duration Section */}
+                    <section className="bg-gray-50 p-6 rounded-md border border-gray-200">
+                        <h2 className="text-lg font-semibold text-gray-800 mb-4">Estimated Benefit / Cost / Duration</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Estimated Benefit (THB) <span className="text-red-500">*</span></label>
+                                <input
+                                    type="number"
+                                    name="estimatedBenefit"
+                                    value={formData.estimatedBenefit}
+                                    onChange={handleChange}
+                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                                    placeholder="0.00"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Estimated Cost (THB) <span className="text-red-500">*</span></label>
+                                <input
+                                    type="number"
+                                    name="estimatedCost"
+                                    value={formData.estimatedCost}
+                                    onChange={handleChange}
+                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                                    placeholder="0.00"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Estimated Duration - Start Date <span className="text-red-500">*</span></label>
+                                <input
+                                    type="date"
+                                    name="estimatedStartDate"
+                                    value={formData.estimatedStartDate}
+                                    onChange={handleChange}
+                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Estimated Duration - End Date <span className="text-red-500">*</span></label>
+                                <input
+                                    type="date"
+                                    name="estimatedEndDate"
+                                    value={formData.estimatedEndDate}
+                                    onChange={handleChange}
+                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                                />
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Change Description Section */}
+                    <section>
+                        <h2 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">Change Description</h2>
+                        <div className="space-y-6">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Background <span className="text-red-500">*</span></label>
+                                <textarea
+                                    name="background"
+                                    value={formData.background}
+                                    onChange={handleChange}
+                                    rows={3}
+                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                                ></textarea>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Objective <span className="text-red-500">*</span></label>
+                                <textarea
+                                    name="objective"
+                                    value={formData.objective}
+                                    onChange={handleChange}
+                                    rows={3}
+                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                                ></textarea>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Target</label>
+                                <textarea
+                                    name="target"
+                                    value={formData.target}
+                                    onChange={handleChange}
+                                    rows={3}
+                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                                ></textarea>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Attachments Section */}
+                    <section>
+                        <h2 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">Attachments <span className="text-red-500">*</span></h2>
                         <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Detail of the Change <span className="text-red-500">*</span></label>
-                                <textarea rows={3} className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Enter detail of the change..." value={formData.detail} onChange={(e) => setFormData({ ...formData, detail: e.target.value })}></textarea>
+                            <p className="text-sm text-gray-500">(For example, Basic design of change, Relevant document such as photo, drawing.)</p>
+                            <div className="flex items-center space-x-4">
+                                <label className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md cursor-pointer hover:bg-gray-300 font-medium">
+                                    Browse
+                                    <input type="file" multiple className="hidden" onChange={handleFileChange} />
+                                </label>
+                                <span className="text-sm text-gray-500">{formData.attachments.length} file(s) selected</span>
                             </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Reason for Change <span className="text-red-500">*</span></label>
-                                <textarea rows={3} className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Enter reason for change..." value={formData.reasonForChange} onChange={(e) => setFormData({ ...formData, reasonForChange: e.target.value })}></textarea>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Benefits <span className="text-red-500">*</span></label>
-                                <textarea rows={3} className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Enter benefits..." value={formData.benefits} onChange={(e) => setFormData({ ...formData, benefits: e.target.value })}></textarea>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Assets/Process affected</label>
-                                <textarea rows={3} className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Enter assets/process affected..." value={formData.assetsAffected} onChange={(e) => setFormData({ ...formData, assetsAffected: e.target.value })}></textarea>
-                            </div>
-                        </div>
 
-                        {/* Noti Number */}
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Noti./PMO Number <span className="text-red-500">*</span></label>
-                            <input type="text" className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Enter notification/PMO number" value={formData.notificationNumber} onChange={(e) => setFormData({ ...formData, notificationNumber: e.target.value })} />
+                            {formData.attachments.length > 0 && (
+                                <ul className="mt-4 space-y-2">
+                                    {formData.attachments.map((file, index) => (
+                                        <li key={index} className="flex items-center space-x-2 text-sm text-blue-600">
+                                            <span>{file.name}</span>
+                                            <button
+                                                onClick={() => removeFile(index)}
+                                                className="text-red-500 hover:text-red-700"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
                         </div>
+                    </section>
 
-                        {/* Risk Level */}
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Risk Level <span className="text-red-500">*</span> <span className="text-xs font-normal text-gray-500">(if not implement change)</span></label>
-                            <div className="flex space-x-6">
-                                <label className="flex items-center space-x-2"><input type="radio" name="risk" className="text-blue-600" checked={formData.riskLevel === "Extremely High"} onChange={() => setFormData({ ...formData, riskLevel: "Extremely High" })} /> <span>Extremely High</span></label>
-                                <label className="flex items-center space-x-2"><input type="radio" name="risk" className="text-blue-600" checked={formData.riskLevel === "High"} onChange={() => setFormData({ ...formData, riskLevel: "High" })} /> <span>High</span></label>
-                                <label className="flex items-center space-x-2"><input type="radio" name="risk" className="text-blue-600" checked={formData.riskLevel === "Medium"} onChange={() => setFormData({ ...formData, riskLevel: "Medium" })} /> <span>Medium</span></label>
-                                <label className="flex items-center space-x-2"><input type="radio" name="risk" className="text-blue-600" checked={formData.riskLevel === "Low"} onChange={() => setFormData({ ...formData, riskLevel: "Low" })} /> <span>Low</span></label>
-                            </div>
-                        </div>
-
-                        {/* Attachment */}
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Attachment <span className="text-red-500">*</span></label>
-                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:bg-gray-50 transition-colors cursor-pointer">
-                                <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                                <div className="mt-2 text-sm text-gray-600">
-                                    <span className="font-medium text-blue-600 hover:text-blue-500">Select files...</span>
-                                    <span className="pl-1">or drag and drop files here</span>
-                                </div>
-                            </div>
-                            <p className="mt-2 text-xs text-blue-600 cursor-pointer hover:underline">Click to download "Risk Assessment if not implement" Form</p>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center space-x-4 pt-6 border-t border-gray-200">
-                            <button onClick={handleSubmit} className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium">Submit</button>
-                            <button className="px-6 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 font-medium">Save Draft</button>
-                            <button onClick={handleBack} className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 font-medium">Discard</button>
-                        </div>
+                    {/* Actions */}
+                    <div className="flex items-center space-x-4 pt-8 border-t border-gray-200">
+                        <button
+                            onClick={() => handleSubmit('Draft')}
+                            className="px-8 py-3 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 font-bold shadow-sm"
+                        >
+                            SAVE DRAFT
+                        </button>
+                        <button
+                            onClick={() => handleSubmit('Submitted')}
+                            className="px-8 py-3 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 font-bold shadow-sm"
+                        >
+                            SUBMIT
+                        </button>
+                        <Link
+                            href="/"
+                            className="px-8 py-3 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 font-bold shadow-sm"
+                        >
+                            DISCARD
+                        </Link>
                     </div>
-                )}
+                </div>
             </div>
         </div>
     );
