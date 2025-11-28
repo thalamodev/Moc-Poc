@@ -1,0 +1,30 @@
+# General
+.DS_Store
+.env
+.env.local
+.env.*.local
+*.log
+
+# Visual Studio / .NET
+.vs/
+bin/
+obj/
+*.user
+*.suo
+[Dd]ebug/
+[Rr]elease/
+*.pdb
+*.dll
+
+# Node.js / Frontend
+node_modules/
+.next/
+build/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Docker
+.docker/

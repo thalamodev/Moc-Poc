@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./Backend/Thalamo.Gsp.Emoc
+      dockerfile: Thalamo.Gsp.Emoc.Services/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      # Update this connection string to point to your SQL MI
+      - ConnectionStrings__DefaultConnection=Server=YOUR_SQL_MI_ADDRESS;Database=GspEmocDb;User Id=YOUR_USER;Password=YOUR_PASSWORD;TrustServerCertificate=True;
+      - AzureAd__ClientId=YOUR_CLIENT_ID
+      - AzureAd__TenantId=YOUR_TENANT_ID
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=https://localhost:7078
+    depends_on:
+      - backend

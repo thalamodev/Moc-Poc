@@ -1,0 +1,6 @@
+@Thalamo.Gsp.Emoc.Services_HostAddress = http://localhost:5076
+
+GET {{Thalamo.Gsp.Emoc.Services_HostAddress}}/about/version
+Accept: application/json
+
+###
