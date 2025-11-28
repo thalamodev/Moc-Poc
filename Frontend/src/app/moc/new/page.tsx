@@ -30,84 +30,125 @@ export default function NewMocPage() {
         estimatedCost: "",
         estimatedStartDate: "",
         estimatedEndDate: "",
-        background: "",
-        objective: "",
-        target: "",
-        attachments: [] as File[],
-    });
+        const [aiPrompt, setAiPrompt] = useState("");
+        const [isAiLoading, setIsAiLoading] = useState(false);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
+        const handleAskAI = async () => {
+            if (!aiPrompt.trim()) return;
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            const newFiles = Array.from(e.target.files);
-            setFormData(prev => ({ ...prev, attachments: [...prev.attachments, ...newFiles] }));
-        }
-    };
+            setIsAiLoading(true);
+            try {
+                const webhookUrl = process.env.NEXT_PUBLIC_AI_WEBHOOK_URL;
+                if (!webhookUrl) {
+                    alert("AI Webhook URL is not configured.");
+                    return;
+                }
 
-    const removeFile = (index: number) => {
-        setFormData(prev => ({
-            ...prev,
-            attachments: prev.attachments.filter((_, i) => i !== index)
-        }));
-    };
+                // Call the webhook with the prompt as a query parameter
+                const response = await fetch(`${webhookUrl}?chatInput=${encodeURIComponent(aiPrompt)}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
 
-    const handleSubmit = async (status: string) => {
-        // Basic Validation
-        if (!formData.title || !formData.type || !formData.reasonForChange || !formData.estimatedBenefit ||
-            !formData.estimatedCost || !formData.estimatedStartDate || !formData.estimatedEndDate ||
-            !formData.background || !formData.objective || formData.attachments.length === 0) {
-            alert("Please fill in all required fields and upload at least one attachment.");
-            return;
-        }
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log("AI Response:", data);
 
-        try {
-            // Prepare payload for API
-            const payload = {
-                title: formData.title,
-                type: formData.type,
-                reasonForChange: formData.reasonForChange,
-                estimatedBenefit: parseFloat(formData.estimatedBenefit),
-                estimatedCost: parseFloat(formData.estimatedCost),
-                estimatedStartDate: formData.estimatedStartDate,
-                estimatedEndDate: formData.estimatedEndDate,
-                background: formData.background,
-                objective: formData.objective,
-                target: formData.target,
-                // Attachments would typically be uploaded to a separate endpoint or as FormData
-                // For this stub, we just send the metadata
-            };
-
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'}/api/MocRequests`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload),
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                alert(`MoC Request ${status === 'Draft' ? 'Saved as Draft' : 'Submitted'} Successfully! ID: ${data.id}`);
-                router.push("/"); // Redirect to home
-            } else {
-                alert('Failed to create MoC Request');
-                console.error('Error:', await response.text());
+                    if (typeof data === 'object' && data !== null) {
+                        setFormData(prev => ({
+                            ...prev,
+                            ...data
+                        }));
+                        alert("AI has updated the form based on your prompt!");
+                    } else {
+                        alert("AI Response received: " + JSON.stringify(data));
+                    }
+                } else {
+                    console.error("AI Error:", await response.text());
+                    alert("Failed to get response from AI.");
+                }
+            } catch (error) {
+                console.error("AI Request Failed:", error);
+                alert("An error occurred while contacting AI.");
+            } finally {
+                setIsAiLoading(false);
             }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('An error occurred while creating the MoC Request');
-        }
-    };
+        };
 
-    return (
-        <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative">
+        const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+            const { name, value } = e.target;
+            setFormData(prev => ({ ...prev, [name]: value }));
+        };
+
+        const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+            if (e.target.files) {
+                const newFiles = Array.from(e.target.files);
+                setFormData(prev => ({ ...prev, attachments: [...prev.attachments, ...newFiles] }));
+            }
+        };
+
+        const removeFile = (index: number) => {
+            setFormData(prev => ({
+                ...prev,
+                attachments: prev.attachments.filter((_, i) => i !== index)
+            }));
+        };
+
+        const handleSubmit = async (status: string) => {
+            // Basic Validation
+            if (!formData.title || !formData.type || !formData.reasonForChange || !formData.estimatedBenefit ||
+                !formData.estimatedCost || !formData.estimatedStartDate || !formData.estimatedEndDate ||
+                !formData.background || !formData.objective || formData.attachments.length === 0) {
+                alert("Please fill in all required fields and upload at least one attachment.");
+                return;
+            }
+
+            try {
+                // Prepare payload for API
+                const payload = {
+                    title: formData.title,
+                    type: formData.type,
+                    reasonForChange: formData.reasonForChange,
+                    estimatedBenefit: parseFloat(formData.estimatedBenefit),
+                    estimatedCost: parseFloat(formData.estimatedCost),
+                    estimatedStartDate: formData.estimatedStartDate,
+                    estimatedEndDate: formData.estimatedEndDate,
+                    background: formData.background,
+                    objective: formData.objective,
+                    target: formData.target,
+                    // Attachments would typically be uploaded to a separate endpoint or as FormData
+                    // For this stub, we just send the metadata
+                };
+
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'}/api/MocRequests`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(`MoC Request ${status === 'Draft' ? 'Saved as Draft' : 'Submitted'} Successfully! ID: ${data.id}`);
+                    router.push("/"); // Redirect to home
+                } else {
+                    alert('Failed to create MoC Request');
+                    console.error('Error:', await response.text());
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while creating the MoC Request');
+            }
+        };
+
+        return(
+        <div className = "max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative" >
             <div className="flex justify-between items-center mb-8 border-b pb-4">
                 <h1 className="text-3xl font-bold text-gray-900">New MoC Request</h1>
-
+                
                 {/* AI Chatbot Widget */}
                 <div className="w-80 bg-blue-50 border border-blue-200 rounded-lg shadow-sm p-3 flex flex-col space-y-2">
                     <div className="flex items-center space-x-2 text-blue-800 mb-1">
@@ -116,13 +157,20 @@ export default function NewMocPage() {
                         </svg>
                         <span className="text-sm font-bold">AI Assistant</span>
                     </div>
-                    <textarea
-                        className="w-full text-sm border-blue-200 rounded-md focus:ring-blue-500 focus:border-blue-500 p-2 resize-none"
-                        rows={2}
+                    <textarea 
+                        className="w-full text-sm border-blue-200 rounded-md focus:ring-blue-500 focus:border-blue-500 p-2 resize-none" 
+                        rows={2} 
                         placeholder="Ask AI to help fill this form..."
+                        value={aiPrompt}
+                        onChange={(e) => setAiPrompt(e.target.value)}
+                        disabled={isAiLoading}
                     ></textarea>
-                    <button className="self-end px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded hover:bg-blue-700 transition-colors">
-                        Ask AI
+                    <button 
+                        onClick={handleAskAI}
+                        disabled={isAiLoading}
+                        className={`self-end px-3 py-1 text-white text-xs font-bold rounded transition-colors ${isAiLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                    >
+                        {isAiLoading ? 'Asking...' : 'Ask AI'}
                     </button>
                 </div>
             </div>
@@ -150,194 +198,194 @@ export default function NewMocPage() {
                     </div>
                 </div>
 
-                <div className="p-6 space-y-8">
-                    {/* MoC Info Section */}
-                    <section>
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">MOC Info</h2>
-                        <div className="space-y-6">
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">MOC Title <span className="text-red-500">*</span></label>
-                                <input
-                                    type="text"
-                                    name="title"
-                                    value={formData.title}
-                                    onChange={handleChange}
-                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
-                                    placeholder="Enter MOC Title"
-                                />
-                            </div>
+        <div className="p-6 space-y-8">
+            {/* MoC Info Section */}
+            <section>
+                <h2 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">MOC Info</h2>
+                <div className="space-y-6">
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">MOC Title <span className="text-red-500">*</span></label>
+                        <input
+                            type="text"
+                            name="title"
+                            value={formData.title}
+                            onChange={handleChange}
+                            className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                            placeholder="Enter MOC Title"
+                        />
+                    </div>
 
-                            <div className="w-full md:w-1/3">
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Type <span className="text-red-500">*</span></label>
-                                <select
-                                    name="type"
-                                    value={formData.type}
-                                    onChange={handleChange}
-                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
-                                >
-                                    <option value="">Please select</option>
-                                    <option value="Permanent">Permanent</option>
-                                    <option value="Temporary">Temporary</option>
-                                    <option value="Overriding">Overriding</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Reason for changes <span className="text-red-500">*</span></label>
-                                <textarea
-                                    name="reasonForChange"
-                                    value={formData.reasonForChange}
-                                    onChange={handleChange}
-                                    rows={4}
-                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
-                                    placeholder="Describe the reason for changes..."
-                                ></textarea>
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* Estimated Benefit / Cost / Duration Section */}
-                    <section className="bg-gray-50 p-6 rounded-md border border-gray-200">
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4">Estimated Benefit / Cost / Duration</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Estimated Benefit (THB) <span className="text-red-500">*</span></label>
-                                <input
-                                    type="number"
-                                    name="estimatedBenefit"
-                                    value={formData.estimatedBenefit}
-                                    onChange={handleChange}
-                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
-                                    placeholder="0.00"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Estimated Cost (THB) <span className="text-red-500">*</span></label>
-                                <input
-                                    type="number"
-                                    name="estimatedCost"
-                                    value={formData.estimatedCost}
-                                    onChange={handleChange}
-                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
-                                    placeholder="0.00"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Estimated Duration - Start Date <span className="text-red-500">*</span></label>
-                                <input
-                                    type="date"
-                                    name="estimatedStartDate"
-                                    value={formData.estimatedStartDate}
-                                    onChange={handleChange}
-                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Estimated Duration - End Date <span className="text-red-500">*</span></label>
-                                <input
-                                    type="date"
-                                    name="estimatedEndDate"
-                                    value={formData.estimatedEndDate}
-                                    onChange={handleChange}
-                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
-                                />
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* Change Description Section */}
-                    <section>
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">Change Description</h2>
-                        <div className="space-y-6">
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Background <span className="text-red-500">*</span></label>
-                                <textarea
-                                    name="background"
-                                    value={formData.background}
-                                    onChange={handleChange}
-                                    rows={3}
-                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
-                                ></textarea>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Objective <span className="text-red-500">*</span></label>
-                                <textarea
-                                    name="objective"
-                                    value={formData.objective}
-                                    onChange={handleChange}
-                                    rows={3}
-                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
-                                ></textarea>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Target</label>
-                                <textarea
-                                    name="target"
-                                    value={formData.target}
-                                    onChange={handleChange}
-                                    rows={3}
-                                    className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
-                                ></textarea>
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* Attachments Section */}
-                    <section>
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">Attachments <span className="text-red-500">*</span></h2>
-                        <div className="space-y-4">
-                            <p className="text-sm text-gray-500">(For example, Basic design of change, Relevant document such as photo, drawing.)</p>
-                            <div className="flex items-center space-x-4">
-                                <label className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md cursor-pointer hover:bg-gray-300 font-medium">
-                                    Browse
-                                    <input type="file" multiple className="hidden" onChange={handleFileChange} />
-                                </label>
-                                <span className="text-sm text-gray-500">{formData.attachments.length} file(s) selected</span>
-                            </div>
-
-                            {formData.attachments.length > 0 && (
-                                <ul className="mt-4 space-y-2">
-                                    {formData.attachments.map((file, index) => (
-                                        <li key={index} className="flex items-center space-x-2 text-sm text-blue-600">
-                                            <span>{file.name}</span>
-                                            <button
-                                                onClick={() => removeFile(index)}
-                                                className="text-red-500 hover:text-red-700"
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                </svg>
-                                            </button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
-                    </section>
-
-                    {/* Actions */}
-                    <div className="flex items-center space-x-4 pt-8 border-t border-gray-200">
-                        <button
-                            onClick={() => handleSubmit('Draft')}
-                            className="px-8 py-3 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 font-bold shadow-sm"
+                    <div className="w-full md:w-1/3">
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Type <span className="text-red-500">*</span></label>
+                        <select
+                            name="type"
+                            value={formData.type}
+                            onChange={handleChange}
+                            className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
                         >
-                            SAVE DRAFT
-                        </button>
-                        <button
-                            onClick={() => handleSubmit('Submitted')}
-                            className="px-8 py-3 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 font-bold shadow-sm"
-                        >
-                            SUBMIT
-                        </button>
-                        <Link
-                            href="/"
-                            className="px-8 py-3 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 font-bold shadow-sm"
-                        >
-                            DISCARD
-                        </Link>
+                            <option value="">Please select</option>
+                            <option value="Permanent">Permanent</option>
+                            <option value="Temporary">Temporary</option>
+                            <option value="Overriding">Overriding</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Reason for changes <span className="text-red-500">*</span></label>
+                        <textarea
+                            name="reasonForChange"
+                            value={formData.reasonForChange}
+                            onChange={handleChange}
+                            rows={4}
+                            className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                            placeholder="Describe the reason for changes..."
+                        ></textarea>
                     </div>
                 </div>
+            </section>
+
+            {/* Estimated Benefit / Cost / Duration Section */}
+            <section className="bg-gray-50 p-6 rounded-md border border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-800 mb-4">Estimated Benefit / Cost / Duration</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Estimated Benefit (THB) <span className="text-red-500">*</span></label>
+                        <input
+                            type="number"
+                            name="estimatedBenefit"
+                            value={formData.estimatedBenefit}
+                            onChange={handleChange}
+                            className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                            placeholder="0.00"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Estimated Cost (THB) <span className="text-red-500">*</span></label>
+                        <input
+                            type="number"
+                            name="estimatedCost"
+                            value={formData.estimatedCost}
+                            onChange={handleChange}
+                            className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                            placeholder="0.00"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Estimated Duration - Start Date <span className="text-red-500">*</span></label>
+                        <input
+                            type="date"
+                            name="estimatedStartDate"
+                            value={formData.estimatedStartDate}
+                            onChange={handleChange}
+                            className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Estimated Duration - End Date <span className="text-red-500">*</span></label>
+                        <input
+                            type="date"
+                            name="estimatedEndDate"
+                            value={formData.estimatedEndDate}
+                            onChange={handleChange}
+                            className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                        />
+                    </div>
+                </div>
+            </section>
+
+            {/* Change Description Section */}
+            <section>
+                <h2 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">Change Description</h2>
+                <div className="space-y-6">
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Background <span className="text-red-500">*</span></label>
+                        <textarea
+                            name="background"
+                            value={formData.background}
+                            onChange={handleChange}
+                            rows={3}
+                            className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                        ></textarea>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Objective <span className="text-red-500">*</span></label>
+                        <textarea
+                            name="objective"
+                            value={formData.objective}
+                            onChange={handleChange}
+                            rows={3}
+                            className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                        ></textarea>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Target</label>
+                        <textarea
+                            name="target"
+                            value={formData.target}
+                            onChange={handleChange}
+                            rows={3}
+                            className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                        ></textarea>
+                    </div>
+                </div>
+            </section>
+
+            {/* Attachments Section */}
+            <section>
+                <h2 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">Attachments <span className="text-red-500">*</span></h2>
+                <div className="space-y-4">
+                    <p className="text-sm text-gray-500">(For example, Basic design of change, Relevant document such as photo, drawing.)</p>
+                    <div className="flex items-center space-x-4">
+                        <label className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md cursor-pointer hover:bg-gray-300 font-medium">
+                            Browse
+                            <input type="file" multiple className="hidden" onChange={handleFileChange} />
+                        </label>
+                        <span className="text-sm text-gray-500">{formData.attachments.length} file(s) selected</span>
+                    </div>
+
+                    {formData.attachments.length > 0 && (
+                        <ul className="mt-4 space-y-2">
+                            {formData.attachments.map((file, index) => (
+                                <li key={index} className="flex items-center space-x-2 text-sm text-blue-600">
+                                    <span>{file.name}</span>
+                                    <button
+                                        onClick={() => removeFile(index)}
+                                        className="text-red-500 hover:text-red-700"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+            </section>
+
+            {/* Actions */}
+            <div className="flex items-center space-x-4 pt-8 border-t border-gray-200">
+                <button
+                    onClick={() => handleSubmit('Draft')}
+                    className="px-8 py-3 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 font-bold shadow-sm"
+                >
+                    SAVE DRAFT
+                </button>
+                <button
+                    onClick={() => handleSubmit('Submitted')}
+                    className="px-8 py-3 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 font-bold shadow-sm"
+                >
+                    SUBMIT
+                </button>
+                <Link
+                    href="/"
+                    className="px-8 py-3 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 font-bold shadow-sm"
+                >
+                    DISCARD
+                </Link>
             </div>
         </div>
+            </div >
+        </div >
     );
 }
