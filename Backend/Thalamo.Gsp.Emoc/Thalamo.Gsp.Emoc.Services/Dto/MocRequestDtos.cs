@@ -8,20 +8,15 @@ namespace Thalamo.Gsp.Emoc.Services.Dto
         public int Id { get; set; }
         public string MocNumber { get; set; } = string.Empty;
         public string Title { get; set; } = string.Empty;
-        public string Category { get; set; } = string.Empty;
-        public string? PlantChangeType { get; set; }
         public string Type { get; set; } = string.Empty;
-        public string Urgency { get; set; } = string.Empty;
-        public string? InitiatorDepartment { get; set; }
-        public string? InitiatorDivision { get; set; }
-        public string? Location { get; set; }
-        public string? ScopeJson { get; set; }
-        public string? Detail { get; set; }
         public string? ReasonForChange { get; set; }
-        public string? Benefits { get; set; }
-        public string? AssetsAffected { get; set; }
-        public string? NotificationNumber { get; set; }
-        public string RiskLevel { get; set; } = string.Empty;
+        public decimal? EstimatedBenefit { get; set; }
+        public decimal? EstimatedCost { get; set; }
+        public DateTime? EstimatedStartDate { get; set; }
+        public DateTime? EstimatedEndDate { get; set; }
+        public string? Background { get; set; }
+        public string? Objective { get; set; }
+        public string? Target { get; set; }
         public string Status { get; set; } = string.Empty;
         public string RequesterId { get; set; } = string.Empty;
         public string RequesterName { get; set; } = string.Empty;
@@ -35,23 +30,31 @@ namespace Thalamo.Gsp.Emoc.Services.Dto
         [MaxLength(200)]
         public string Title { get; set; } = string.Empty;
 
-        public string Category { get; set; } = string.Empty;
-        public string? PlantChangeType { get; set; }
-        public string Type { get; set; } = string.Empty; // Permanent/Temporary
-        public string Urgency { get; set; } = "Normal";
-        public string? InitiatorDepartment { get; set; }
-        public string? InitiatorDivision { get; set; }
-        public string? Location { get; set; }
-        public object? Scope { get; set; } // Accept object, controller will serialize to JSON
-        public string? Detail { get; set; }
-        public string? ReasonForChange { get; set; }
-        public string? Benefits { get; set; }
-        public string? AssetsAffected { get; set; }
-        public string? NotificationNumber { get; set; }
+        [Required]
+        public string Type { get; set; } = string.Empty; // Permanent, Temporary, Overriding
 
         [Required]
-        [MaxLength(50)]
-        public string RiskLevel { get; set; } = string.Empty;
+        public string ReasonForChange { get; set; } = string.Empty;
+
+        [Required]
+        public decimal EstimatedBenefit { get; set; }
+
+        [Required]
+        public decimal EstimatedCost { get; set; }
+
+        [Required]
+        public DateTime EstimatedStartDate { get; set; }
+
+        [Required]
+        public DateTime EstimatedEndDate { get; set; }
+
+        [Required]
+        public string Background { get; set; } = string.Empty;
+
+        [Required]
+        public string Objective { get; set; } = string.Empty;
+
+        public string? Target { get; set; }
     }
 
     public class UpdateMocRequestDto : CreateMocRequestDto
