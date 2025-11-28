@@ -27,7 +27,7 @@ services:
         - NEXT_PUBLIC_API_URL=http://72.61.117.172:8090
     restart: always
     ports:
-      - "80:3000" # Expose on port 80 (HTTP)
+      - "3000:3000" # Expose on port 3000 (HTTP)
     environment:
       - NEXT_PUBLIC_API_URL=http://72.61.117.172:8090
     depends_on:
