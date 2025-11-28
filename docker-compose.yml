@@ -22,5 +22,6 @@ services:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=https://localhost:7078
+      - NEXT_PUBLIC_AI_WEBHOOK_URL=NEXT_PUBLIC_AI_WEBHOOK_URL=https://n8n.srv1155402.hstgr.cloud/webhook-test/9519330f-64bc-41c8-bc8d-e370be7e6431
     depends_on:
       - backend
