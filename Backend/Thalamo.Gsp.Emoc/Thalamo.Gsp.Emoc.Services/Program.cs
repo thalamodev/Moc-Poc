@@ -15,8 +15,8 @@ namespace Thalamo.Gsp.Emoc.Services
             // builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             //     .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
 
-            // builder.Services.AddDbContext<AppDbContext>(options =>
-            //     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+            builder.Services.AddDbContext<AppDbContext>(options =>
+                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
