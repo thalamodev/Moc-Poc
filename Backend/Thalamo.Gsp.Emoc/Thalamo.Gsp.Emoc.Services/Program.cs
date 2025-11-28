@@ -12,11 +12,11 @@ namespace Thalamo.Gsp.Emoc.Services
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
+            // builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            //     .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
 
-            builder.Services.AddDbContext<AppDbContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+            // builder.Services.AddDbContext<AppDbContext>(options =>
+            //     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -28,7 +28,7 @@ namespace Thalamo.Gsp.Emoc.Services
             {
                 options.AddPolicy("AllowLocal3000", policy =>
                 {
-                    policy.WithOrigins("http://localhost:3000")
+                    policy.WithOrigins("http://localhost:3000", "http://72.61.117.172", "http://72.61.117.172:3000")
                           .AllowAnyHeader()
                           .AllowAnyMethod()
                           .AllowCredentials();
