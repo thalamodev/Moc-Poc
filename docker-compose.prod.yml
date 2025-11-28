@@ -7,10 +7,10 @@ services:
       dockerfile: Thalamo.Gsp.Emoc.Services/Dockerfile
     restart: always
     ports:
-      - "8090:8080"
+      - "8090:80890"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_URLS=http://+:8090
       # YOU MUST UPDATE THESE ON THE SERVER
       - ConnectionStrings__DefaultConnection=${DB_CONNECTION_STRING}
       - AzureAd__ClientId=${AZURE_CLIENT_ID}
@@ -27,7 +27,7 @@ services:
         - NEXT_PUBLIC_API_URL=http://72.61.117.172:8090
     restart: always
     ports:
-      - "3000:3000" # Expose on port 3000 (HTTP)
+      - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://72.61.117.172:8090
     depends_on:

@@ -6,7 +6,7 @@ services:
       context: ./Backend/Thalamo.Gsp.Emoc
       dockerfile: Thalamo.Gsp.Emoc.Services/Dockerfile
     ports:
-      - "8080:8080"
+      - "8090:8090"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       # Update this connection string to point to your SQL MI
