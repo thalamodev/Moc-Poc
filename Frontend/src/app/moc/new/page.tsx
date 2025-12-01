@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import * as signalR from "@microsoft/signalr";
 
 export default function NewMocPage() {
     const router = useRouter();
     const [currentDate, setCurrentDate] = useState("");
+    const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
+    const connectionIdRef = useRef<string>("");
 
     // Initialize date on client side to avoid hydration mismatch
     useEffect(() => {
@@ -19,7 +22,44 @@ export default function NewMocPage() {
             minute: '2-digit'
         });
         setCurrentDate(formattedDate);
+
+        // Initialize SignalR Connection
+        const newConnection = new signalR.HubConnectionBuilder()
+            .withUrl(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'}/aiHub`)
+            .withAutomaticReconnect()
+            .build();
+
+        setConnection(newConnection);
     }, []);
+
+    useEffect(() => {
+        if (connection) {
+            connection.start()
+                .then(() => {
+                    console.log("SignalR Connected!");
+                    if (connection.connectionId) {
+                        connectionIdRef.current = connection.connectionId;
+                        console.log("Connection ID:", connection.connectionId);
+                    }
+                })
+                .catch(e => console.log("Connection failed: ", e));
+
+            connection.on("ReceiveAiResult", (data: any) => {
+                console.log("AI Result Received via SignalR:", data);
+                setIsAiLoading(false); // Stop loading when result arrives
+
+                if (typeof data === 'object' && data !== null) {
+                    setFormData(prev => ({
+                        ...prev,
+                        ...data
+                    }));
+                    alert("AI has updated the form based on your prompt!");
+                } else {
+                    alert("AI Response received: " + JSON.stringify(data));
+                }
+            });
+        }
+    }, [connection]);
 
     const [formData, setFormData] = useState({
         requester: "John Smith",
@@ -41,44 +81,36 @@ export default function NewMocPage() {
 
     const handleAskAI = async () => {
         if (!aiPrompt.trim()) return;
+        if (!connectionIdRef.current) {
+            alert("SignalR not connected yet. Please wait...");
+            return;
+        }
 
         setIsAiLoading(true);
         try {
-            const webhookUrl = process.env.NEXT_PUBLIC_AI_WEBHOOK_URL;
-            if (!webhookUrl) {
-                alert("AI Webhook URL is not configured.");
-                return;
-            }
-
-            // Call the webhook with the prompt as a query parameter
-            const response = await fetch(`${webhookUrl}?chatInput=${encodeURIComponent(aiPrompt)}`, {
-                method: 'GET',
+            // Call Backend API instead of N8N directly
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'}/api/Ai/ask`, {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                }
+                },
+                body: JSON.stringify({
+                    prompt: aiPrompt,
+                    connectionId: connectionIdRef.current
+                })
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                console.log("AI Response:", data);
-
-                if (typeof data === 'object' && data !== null) {
-                    setFormData(prev => ({
-                        ...prev,
-                        ...data
-                    }));
-                    alert("AI has updated the form based on your prompt!");
-                } else {
-                    alert("AI Response received: " + JSON.stringify(data));
-                }
-            } else {
+            if (!response.ok) {
                 console.error("AI Error:", await response.text());
-                alert("Failed to get response from AI.");
+                alert("Failed to send request to AI Agent.");
+                setIsAiLoading(false);
+            } else {
+                console.log("Request sent to AI Agent, waiting for SignalR callback...");
+                // We keep isAiLoading = true until SignalR callback arrives
             }
         } catch (error) {
             console.error("AI Request Failed:", error);
             alert("An error occurred while contacting AI.");
-        } finally {
             setIsAiLoading(false);
         }
     };
@@ -151,7 +183,7 @@ export default function NewMocPage() {
     };
 
     return (
-        <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative" >
+        <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative">
             <div className="flex justify-between items-center mb-8 border-b pb-4">
                 <h1 className="text-3xl font-bold text-gray-900">New MoC Request</h1>
 
@@ -391,7 +423,7 @@ export default function NewMocPage() {
                         </Link>
                     </div>
                 </div>
-            </div >
-        </div >
+            </div>
+        </div>
     );
 }

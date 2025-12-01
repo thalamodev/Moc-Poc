@@ -19,6 +19,7 @@ namespace Thalamo.Gsp.Emoc.Services
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             builder.Services.AddControllers();
+            builder.Services.AddSignalR(); // Add SignalR
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
@@ -31,7 +32,7 @@ namespace Thalamo.Gsp.Emoc.Services
                     policy.WithOrigins("http://localhost:3000", "http://72.61.117.172", "http://72.61.117.172:3000")
                           .AllowAnyHeader()
                           .AllowAnyMethod()
-                          .AllowCredentials();
+                          .AllowCredentials(); // Important for SignalR
                 });
             });
 
@@ -53,6 +54,7 @@ namespace Thalamo.Gsp.Emoc.Services
             app.UseAuthorization();
 
             app.MapControllers();
+            app.MapHub<Thalamo.Gsp.Emoc.Services.Hubs.AiHub>("/aiHub"); // Map Hub
 
             app.Run();
         }
