@@ -80,7 +80,7 @@ namespace Thalamo.Gsp.Emoc.Services.Controllers
             // Push the result to the specific client via SignalR
             await _hubContext.Clients.Client(request.ConnectionId).SendAsync("ReceiveAiResult", request.Result);
 
-            return Ok();
+            return Ok(new { status = "success" });
         }
     }
 }
