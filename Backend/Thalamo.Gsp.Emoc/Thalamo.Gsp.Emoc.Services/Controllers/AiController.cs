@@ -56,12 +56,21 @@ namespace Thalamo.Gsp.Emoc.Services.Controllers
                 // However, since N8N webhook node might wait for the chain, we can just trigger it.
                 // Ideally, N8N should just accept the request and process async, OR we wait here.
                 // Given the requirement for "Callback", we assume N8N will call us back.
-                
+
                 // NOTE: If N8N is synchronous, this call will wait. If we want async, we should just fire it.
                 // For this implementation, we'll fire and forget to avoid blocking the API thread if N8N takes long.
-                _ = _httpClient.GetAsync(n8nUrlWithParams); 
+                //_ = _httpClient.GetAsync(n8nUrlWithParams); 
+
+                //return Ok(new { message = "Request sent to AI Agent." });
+
+                // Get result synchronously to ensure N8N received it
                 
-                return Ok(new { message = "Request sent to AI Agent." });
+                //var response = await _httpClient.GetAsync(n8nUrlWithParams);
+                var newContent = await _httpClient.GetStringAsync(n8nUrlWithParams);
+
+                // Return result from N8N if synchronous
+                //var content = await response.Content.ReadAsStringAsync();
+                return Ok(new { Response = newContent });
             }
             catch (Exception ex)
             {
