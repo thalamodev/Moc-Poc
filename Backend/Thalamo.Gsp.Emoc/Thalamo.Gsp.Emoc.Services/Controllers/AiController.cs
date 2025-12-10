@@ -78,6 +78,34 @@ namespace Thalamo.Gsp.Emoc.Services.Controllers
             }
         }
 
+        [HttpPost("ask2")]
+        public async Task<IActionResult> AskAi2([FromBody] AskRequest request)
+        {
+            if (string.IsNullOrEmpty(request.Prompt) || string.IsNullOrEmpty(request.ConnectionId))
+            {
+                return BadRequest("Prompt and ConnectionId are required.");
+            }
+
+            var n8nWebhookUrl = _configuration["N8N_WEBHOOK2_URL"];
+            if (string.IsNullOrEmpty(n8nWebhookUrl))
+            {
+                return StatusCode(500, "N8N Webhook 2 URL is not configured.");
+            }
+
+            var n8nUrlWithParams = $"{n8nWebhookUrl}?chatInput={Uri.EscapeDataString(request.Prompt)}&connectionId={Uri.EscapeDataString(request.ConnectionId)}";
+
+            try
+            {
+                var newContent = await _httpClient.GetStringAsync(n8nUrlWithParams);
+                return Ok(new { Response = newContent });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error calling N8N: {ex.Message}");
+            }
+        }
+
+
         [HttpPost("callback")]
         public async Task<IActionResult> ReceiveCallback([FromBody] CallbackRequest request)
         {
