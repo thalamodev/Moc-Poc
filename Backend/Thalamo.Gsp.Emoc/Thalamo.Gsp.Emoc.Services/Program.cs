@@ -29,7 +29,7 @@ namespace Thalamo.Gsp.Emoc.Services
             {
                 options.AddPolicy("AllowLocal3000", policy =>
                 {
-                    policy.WithOrigins("http://localhost:3000", "http://72.61.117.172", "http://72.61.117.172:3000")
+                    policy.WithOrigins("http://localhost:3000", "http://72.61.117.172", "http://72.61.117.172:3000", "http://72.61.117.172:3001")
                           .AllowAnyHeader()
                           .AllowAnyMethod()
                           .AllowCredentials(); // Important for SignalR
